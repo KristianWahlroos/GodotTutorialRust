@@ -20,6 +20,7 @@ struct Player {
     animation_player: Option<Ref<AnimationPlayer>>,
     animation_tree: Option<Ref<AnimationTree>>,
     animation_state: Option<Ref<AnimationNodeStateMachinePlayback>>,
+    state: State,
 }
 
 #[methods]
@@ -30,6 +31,7 @@ impl Player {
             animation_player: None,
             animation_tree: None,
             animation_state: None,
+            state: State::Move,
         }
     }
 
@@ -53,6 +55,9 @@ impl Player {
             )
         };
         unsafe {
+            self.animation_tree.unwrap().assume_safe().set_active(true);
+        }
+        unsafe {
             self.animation_state = self
                 .animation_tree
                 .unwrap()
@@ -64,6 +69,14 @@ impl Player {
 
     #[godot]
     fn _physics_process(&mut self, #[base] owner: &KinematicBody2D, delta: f32) {
+        match self.state {
+            State::Move => self.move_state(owner, delta),
+            State::Roll => (),
+            State::Attack => self.attack_state(),
+        }
+    }
+
+    fn move_state(&mut self, owner: &KinematicBody2D, delta: f32) {
         let input = Input::godot_singleton();
         let mut input_vector = Vector2::new(0.0, 0.0);
 
@@ -89,6 +102,10 @@ impl Player {
                     .unwrap()
                     .assume_safe()
                     .set("parameters/Run/blend_position", input_vector);
+                self.animation_tree
+                    .unwrap()
+                    .assume_safe()
+                    .set("parameters/Attack/blend_position", input_vector);
             }
             self.velocity = self
                 .velocity
@@ -105,6 +122,25 @@ impl Player {
         }
         self.velocity =
             owner.move_and_slide(self.velocity, Vector2::ZERO, false, 4, 0.785398, true);
+        if input.is_action_just_pressed("attack", false) {
+            self.state = State::Attack;
+        }
+    }
+
+    fn attack_state(&mut self) {
+        self.velocity = Vector2::ZERO;
+        unsafe {
+            self.animation_state
+                .as_ref()
+                .unwrap()
+                .assume_safe()
+                .travel("Attack");
+        }
+    }
+
+    #[godot]
+    pub fn attack_animation_finished(&mut self) {
+        self.state = State::Move;
     }
 }
 
