@@ -68,7 +68,7 @@ impl Player {
     }
 
     #[godot]
-    fn _physics_process(&mut self, #[base] owner: &KinematicBody2D, delta: f32) {
+    fn _process(&mut self, #[base] owner: &KinematicBody2D, delta: f32) {
         match self.state {
             State::Move => self.move_state(owner, delta),
             State::Roll => (),

@@ -1,2 +1,2 @@
 [workspace]
-members = [ "player" ]
+members = ["player" , "grass", "grass_effect"]
